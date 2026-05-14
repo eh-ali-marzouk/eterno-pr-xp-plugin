@@ -6,16 +6,16 @@
 
 body {
   margin: 0;
-  min-width: 280px;
+  min-width: 320px;
   background: Canvas;
   color: CanvasText;
 }
 
-main {
-  padding: 16px;
+header {
+  padding: 12px 16px 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 h1 {
@@ -23,17 +23,78 @@ h1 {
   font-size: 16px;
 }
 
+nav#tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+}
+
+.tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  color: CanvasText;
+  padding: 6px 10px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tab.active {
+  border-bottom-color: CurrentColor;
+  opacity: 1;
+}
+
+main {
+  padding: 12px 16px 16px;
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 p {
   margin: 0;
   font-size: 13px;
-  opacity: 0.85;
+}
+
+.hint {
+  opacity: 0.7;
+  font-size: 12px;
 }
 
 p.error {
   color: #cf222e;
-  opacity: 1;
   font-size: 12px;
   word-break: break-word;
+}
+
+label {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+input[type="password"],
+input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, CanvasText 25%, transparent);
+  background: color-mix(in srgb, CanvasText 4%, Canvas);
+  color: CanvasText;
+  font: inherit;
+  font-size: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 6px;
 }
 
 button {
@@ -41,13 +102,50 @@ button {
   border: 1px solid color-mix(in srgb, CanvasText 25%, transparent);
   background: color-mix(in srgb, CanvasText 6%, Canvas);
   color: CanvasText;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
 }
 
-button:hover {
+button.secondary {
+  background: transparent;
+}
+
+button:hover:not(:disabled) {
   background: color-mix(in srgb, CanvasText 12%, Canvas);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+#token-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
+}
+
+ol#leaderboard-list {
+  margin: 0;
+  padding: 0 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+ol#leaderboard-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+ol#leaderboard-list li span.total {
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
 }
