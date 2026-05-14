@@ -13,15 +13,41 @@ body {
 
 main {
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 h1 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 16px;
 }
 
 p {
   margin: 0;
   font-size: 13px;
-  opacity: 0.8;
+  opacity: 0.85;
+}
+
+p.error {
+  color: #cf222e;
+  opacity: 1;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+button {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, CanvasText 25%, transparent);
+  background: color-mix(in srgb, CanvasText 6%, Canvas);
+  color: CanvasText;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: color-mix(in srgb, CanvasText 12%, Canvas);
 }
