@@ -1,9 +1,9 @@
 {
-  "name": "eterno-xp",
+  "name": "review-master",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Cross-browser MV3 extension that gamifies GitHub code review.",
+  "description": "Turn pull-request reviews into XP. Stake. Distribute. Climb the board.",
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/patch-manifest.mjs",

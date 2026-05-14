@@ -1,6 +1,6 @@
-# PR XP
+# Review-Master
 
-Cross-browser (Chrome + Firefox) MV3 extension that gamifies GitHub code review.
+Cross-browser (Chrome + Firefox) MV3 extension that gamifies GitHub code review. Turn pull-request reviews into XP. Stake. Distribute. Climb the board.
 
 ## Development
 

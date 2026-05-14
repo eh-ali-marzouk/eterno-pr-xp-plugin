@@ -3,12 +3,12 @@ import pkg from './package.json'
 
 export default defineManifest({
   manifest_version: 3,
-  name: 'PR XP',
+  name: 'Review-Master',
   description: pkg.description,
   version: pkg.version,
   action: {
     default_popup: 'src/popup/popup.html',
-    default_title: 'PR XP'
+    default_title: 'Review-Master'
   },
   permissions: ['storage', 'identity', 'activeTab'],
   host_permissions: [
@@ -26,6 +26,15 @@ export default defineManifest({
       matches: ['https://github.com/*/*/pull/*'],
       js: ['src/content/content.ts'],
       run_at: 'document_idle'
+    }
+  ],
+  web_accessible_resources: [
+    {
+      resources: [
+        'src/assets/fonts/PressStart2P-Regular.woff2',
+        'src/assets/fonts/VT323-Regular.woff2'
+      ],
+      matches: ['https://github.com/*']
     }
   ],
   browser_specific_settings: {

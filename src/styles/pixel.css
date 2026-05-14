@@ -1,0 +1,369 @@
+/* ============================================================
+   Review-Master — retro pixel/8-bit on GitHub-dark
+   Ported from the Claude Design prototype.
+   ============================================================ */
+
+:root,
+:host {
+  --gh-bg:        #0d1117;
+  --gh-surface:   #161b22;
+  --gh-surface-2: #21262d;
+  --gh-border:    #30363d;
+  --gh-border-2:  #21262d;
+  --gh-text:      #e6edf3;
+  --gh-text-mute: #7d8590;
+  --gh-text-dim:  #484f58;
+  --gh-blue:      #58a6ff;
+  --gh-green:     #3fb950;
+  --gh-green-2:   #238636;
+  --gh-purple:    #a371f7;
+  --gh-orange:    #db6d28;
+  --gh-yellow:    #d29922;
+  --gh-red:       #f85149;
+
+  --xp-glow:      #6ee266;
+  --xp-gold:      #f1c40f;
+  --xp-gold-2:    #b8860b;
+  --xp-cyan:      #79c0ff;
+  --xp-pink:      #f778ba;
+
+  --px:           4px;
+
+  --font-pixel:   "Press Start 2P", "VT323", monospace;
+  --font-mono:    "VT323", ui-monospace, monospace;
+  --font-sys:     -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+                  "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ===== pixel-notched card ===== */
+.pixel-card {
+  position: relative;
+  background: var(--gh-surface);
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--pc-border, var(--gh-border)),
+    0 var(--px) 0 0 var(--pc-border, var(--gh-border)),
+    calc(var(--px) * -1) 0 0 0 var(--pc-border, var(--gh-border)),
+    var(--px) 0 0 0 var(--pc-border, var(--gh-border));
+}
+
+.pixel-inset {
+  position: relative;
+  background: var(--pi-bg, #0a0e14);
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--pi-bg, #0a0e14),
+    0 var(--px) 0 0 var(--pi-bg, #0a0e14),
+    calc(var(--px) * -1) 0 0 0 var(--pi-bg, #0a0e14),
+    var(--px) 0 0 0 var(--pi-bg, #0a0e14);
+}
+
+/* ===== pixel button ===== */
+.pixel-btn {
+  --pb-bg: var(--gh-green-2);
+  --pb-fg: #0d1f12;
+  --pb-shadow: #0a3318;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--pb-fg);
+  background: var(--pb-bg);
+  border: 0;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--pb-bg),
+    0 var(--px) 0 0 var(--pb-bg),
+    calc(var(--px) * -1) 0 0 0 var(--pb-bg),
+    var(--px) 0 0 0 var(--pb-bg),
+    0 calc(var(--px) * 2) 0 0 var(--pb-shadow);
+  transition: transform .08s steps(2);
+}
+.pixel-btn:hover:not(:disabled)  { filter: brightness(1.1); }
+.pixel-btn:active:not(:disabled) { transform: translateY(2px); }
+
+.pixel-btn--green {
+  --pb-bg: var(--gh-green);
+  --pb-fg: #06160a;
+  --pb-shadow: #14502a;
+}
+.pixel-btn--gold {
+  --pb-bg: var(--xp-gold);
+  --pb-fg: #2b1d00;
+  --pb-shadow: #7a5a00;
+}
+.pixel-btn--blue {
+  --pb-bg: var(--gh-blue);
+  --pb-fg: #06121f;
+  --pb-shadow: #1e4a8a;
+}
+.pixel-btn--ghost {
+  --pb-bg: var(--gh-surface-2);
+  --pb-fg: var(--gh-text);
+  --pb-shadow: var(--gh-border);
+}
+.pixel-btn--red {
+  --pb-bg: var(--gh-red);
+  --pb-fg: #2a0606;
+  --pb-shadow: #6a1a1a;
+}
+.pixel-btn--lg { padding: 14px 18px; font-size: 11px; }
+.pixel-btn--sm { padding: 6px 10px;  font-size: 8px;  }
+.pixel-btn--block { width: 100%; }
+.pixel-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ===== pixel pill / chip ===== */
+.pixel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  padding: 5px 8px;
+  text-transform: uppercase;
+  color: var(--gh-text);
+  background: var(--gh-surface-2);
+  box-shadow:
+    0 -2px 0 0 var(--gh-border),
+    0 2px 0 0 var(--gh-border),
+    -2px 0 0 0 var(--gh-border),
+    2px 0 0 0 var(--gh-border);
+}
+.pixel-pill--open   { color: #c5fbd5; background: #1a3d22; box-shadow: 0 -2px 0 0 var(--gh-green), 0 2px 0 0 var(--gh-green), -2px 0 0 0 var(--gh-green), 2px 0 0 0 var(--gh-green); }
+.pixel-pill--merged { color: #e3d5ff; background: #3a256b; box-shadow: 0 -2px 0 0 var(--gh-purple), 0 2px 0 0 var(--gh-purple), -2px 0 0 0 var(--gh-purple), 2px 0 0 0 var(--gh-purple); }
+.pixel-pill--gold   { color: #2b1d00; background: var(--xp-gold); box-shadow: 0 -2px 0 0 var(--xp-gold-2), 0 2px 0 0 var(--xp-gold-2), -2px 0 0 0 var(--xp-gold-2), 2px 0 0 0 var(--xp-gold-2); }
+
+/* ===== segmented progress bar ===== */
+.pixel-bar {
+  --pb-fill: var(--gh-green);
+  --pb-bg:   #0a0e14;
+  --pb-border: var(--gh-border);
+  --pb-pct: 50%;
+  position: relative;
+  height: 16px;
+  background:
+    linear-gradient(90deg, var(--pb-fill) var(--pb-pct), transparent var(--pb-pct)),
+    repeating-linear-gradient(90deg,
+      var(--pb-bg) 0, var(--pb-bg) 7px,
+      var(--pb-border) 7px, var(--pb-border) 8px),
+    var(--pb-bg);
+  box-shadow:
+    0 -2px 0 0 var(--pb-border),
+    0 2px 0 0 var(--pb-border),
+    -2px 0 0 0 var(--pb-border),
+    2px 0 0 0 var(--pb-border);
+}
+.pixel-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0, transparent 7px,
+      rgba(0,0,0,.35) 7px, rgba(0,0,0,.35) 8px);
+  -webkit-mask: linear-gradient(90deg, #000 var(--pb-pct), transparent var(--pb-pct));
+          mask: linear-gradient(90deg, #000 var(--pb-pct), transparent var(--pb-pct));
+}
+
+/* ===== XP digital readout ===== */
+.xp-readout {
+  font-family: var(--font-pixel);
+  font-size: 28px;
+  color: var(--xp-glow);
+  text-shadow:
+    0 0 6px rgba(110, 226, 102, 0.6),
+    0 0 12px rgba(110, 226, 102, 0.25),
+    3px 3px 0 rgba(0,0,0,0.6);
+  letter-spacing: 2px;
+}
+.xp-readout--gold {
+  color: var(--xp-gold);
+  text-shadow:
+    0 0 6px rgba(241, 196, 15, 0.5),
+    0 0 12px rgba(241, 196, 15, 0.2),
+    3px 3px 0 rgba(0,0,0,0.6);
+}
+.xp-readout--purple {
+  color: var(--gh-purple);
+  text-shadow:
+    0 0 6px rgba(163, 113, 247, 0.5),
+    3px 3px 0 rgba(0,0,0,0.6);
+}
+.xp-readout--sm { font-size: 18px; letter-spacing: 1px; }
+
+/* ===== titles ===== */
+.pixel-title {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gh-text-mute);
+}
+.pixel-title-lg {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gh-text);
+}
+
+/* ===== scanlines overlay ===== */
+.scanlines {
+  position: relative;
+  isolation: isolate;
+}
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0) 0,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 3px
+  );
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+/* ===== avatar pixel frame ===== */
+.pixel-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--gh-surface-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--gh-text);
+  box-shadow:
+    0 -3px 0 0 var(--pa-border, var(--gh-border)),
+    0 3px 0 0 var(--pa-border, var(--gh-border)),
+    -3px 0 0 0 var(--pa-border, var(--gh-border)),
+    3px 0 0 0 var(--pa-border, var(--gh-border));
+}
+.pixel-avatar--sm { width: 28px; height: 28px; font-size: 8px; box-shadow:
+    0 -2px 0 0 var(--pa-border, var(--gh-border)),
+    0 2px 0 0 var(--pa-border, var(--gh-border)),
+    -2px 0 0 0 var(--pa-border, var(--gh-border)),
+    2px 0 0 0 var(--pa-border, var(--gh-border)); }
+.pixel-avatar--xs { width: 22px; height: 22px; font-size: 7px; box-shadow:
+    0 -2px 0 0 var(--pa-border, var(--gh-border)),
+    0 2px 0 0 var(--pa-border, var(--gh-border)),
+    -2px 0 0 0 var(--pa-border, var(--gh-border)),
+    2px 0 0 0 var(--pa-border, var(--gh-border)); }
+.pixel-avatar--gold   { --pa-border: var(--xp-gold); }
+.pixel-avatar--silver { --pa-border: #a8b3bd; }
+.pixel-avatar--bronze { --pa-border: #c97a3a; }
+.pixel-avatar--green  { --pa-border: var(--gh-green); }
+.pixel-avatar > svg { display: block; }
+
+/* ===== stepped range slider ===== */
+.pixel-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+.pixel-range::-webkit-slider-runnable-track {
+  height: 12px;
+  background:
+    linear-gradient(90deg,
+      var(--pr-fill, var(--gh-green)) 0 var(--pr-pct, 50%),
+      #0a0e14 var(--pr-pct, 50%) 100%);
+  box-shadow:
+    0 -2px 0 0 var(--gh-border),
+    0 2px 0 0 var(--gh-border),
+    -2px 0 0 0 var(--gh-border),
+    2px 0 0 0 var(--gh-border);
+}
+.pixel-range::-moz-range-track {
+  height: 12px;
+  background:
+    linear-gradient(90deg,
+      var(--pr-fill, var(--gh-green)) 0 var(--pr-pct, 50%),
+      #0a0e14 var(--pr-pct, 50%) 100%);
+  box-shadow:
+    0 -2px 0 0 var(--gh-border),
+    0 2px 0 0 var(--gh-border),
+    -2px 0 0 0 var(--gh-border),
+    2px 0 0 0 var(--gh-border);
+}
+.pixel-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 18px;
+  background: var(--gh-text);
+  border-radius: 0;
+  margin-top: -3px;
+  box-shadow:
+    0 -2px 0 0 #fff,
+    0 2px 0 0 #fff,
+    -2px 0 0 0 #fff,
+    2px 0 0 0 #fff,
+    inset 0 -3px 0 0 rgba(0,0,0,0.2);
+  cursor: grab;
+}
+.pixel-range::-moz-range-thumb {
+  width: 14px;
+  height: 18px;
+  background: var(--gh-text);
+  border: 2px solid #fff;
+  border-radius: 0;
+  cursor: grab;
+}
+
+/* ===== row hover ===== */
+.row-hover { transition: background .12s; }
+.row-hover:hover { background: rgba(255,255,255,0.03); }
+
+/* ===== pixel input (numeric, etc.) ===== */
+.pixel-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: #0a0e14;
+  color: var(--xp-glow);
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  letter-spacing: 2px;
+  border: 0;
+  outline: 0;
+  box-shadow:
+    0 -2px 0 0 var(--gh-border),
+    0 2px 0 0 var(--gh-border),
+    -2px 0 0 0 var(--gh-border),
+    2px 0 0 0 var(--gh-border);
+  text-align: center;
+}
+.pixel-input:focus { box-shadow:
+    0 -2px 0 0 var(--gh-green),
+    0 2px 0 0 var(--gh-green),
+    -2px 0 0 0 var(--gh-green),
+    2px 0 0 0 var(--gh-green); }
+.pixel-input--sm { font-size: 11px; padding: 6px 8px; }
+
+/* ===== animations ===== */
+@keyframes pixel-blink {
+  0%, 60% { opacity: 1; }
+  61%,100% { opacity: 0.55; }
+}
+.blink { animation: pixel-blink 1.1s steps(2, end) infinite; }
+
+@keyframes xp-pulse {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-2px); }
+}
+.bob { animation: xp-pulse 1.4s steps(4, end) infinite; }
