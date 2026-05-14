@@ -789,8 +789,15 @@ function renderDistribute(pr: PrRow): HTMLElement {
     if (!res.ok) { state.error = res.error; render(); return }
     state.pr = res.data ?? state.pr
     state.mode = 'view'
+    const droppedPool = pr.xp_pool
+    const droppedGrants = grants.map((g) => ({
+      login: g.recipient_github_login,
+      pct: g.percentage,
+      points: Math.round((droppedPool * g.percentage) / 100)
+    }))
     state.participants = null
     state.draft = {}
+    playLootDrop(droppedPool, droppedGrants)
     await refreshGrants()
   })
   refreshSubmit()
@@ -815,6 +822,216 @@ async function refreshGrants() {
   const res = await send<GrantRow[]>({ type: 'PR_LIST_GRANTS', pr_id: state.pr.id })
   if (res.ok) state.grants = res.data ?? []
   render()
+}
+
+// ---------- loot-drop celebration ----------
+
+const CELEBRATION_HOST_ID = 'review-master-celebration'
+
+const CELEBRATION_CSS = `
+:host { all: initial; position: fixed; inset: 0; z-index: 2147483647; pointer-events: auto; }
+.cel-root {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.78);
+  overflow: hidden;
+  animation: cel-fade-in .25s steps(4, end) both;
+  font-family: var(--font-pixel);
+}
+.cel-rays {
+  position: absolute; inset: -25%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(184,134,11,0.55) 0deg 15deg,
+    transparent       15deg 30deg
+  );
+  animation: cel-spin 8s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(241,196,15,0.35));
+}
+.cel-panel {
+  position: relative;
+  width: min(86%, 420px);
+  background: var(--xp-gold);
+  color: #2b1d00;
+  padding: 0;
+  box-shadow:
+    0 -4px 0 0 var(--xp-gold-2),
+    0 4px 0 0 var(--xp-gold-2),
+    -4px 0 0 0 var(--xp-gold-2),
+    4px 0 0 0 var(--xp-gold-2),
+    0 12px 0 0 rgba(0,0,0,0.45);
+  animation: cel-pop .35s steps(5, end) both;
+}
+.cel-panel-bar {
+  padding: 10px 14px;
+  font-size: 11px; letter-spacing: 1.5px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  color: #2b1d00;
+}
+.cel-screen {
+  margin: 0 12px 12px;
+  background: #0a0e14;
+  padding: 18px 12px 14px;
+  text-align: center;
+  box-shadow:
+    0 -3px 0 0 #2b1d00,
+    0 3px 0 0 #2b1d00,
+    -3px 0 0 0 #2b1d00,
+    3px 0 0 0 #2b1d00;
+  position: relative;
+  overflow: hidden;
+}
+.cel-screen::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.25) 2px 3px);
+  mix-blend-mode: multiply;
+}
+.cel-amount {
+  font-family: var(--font-pixel);
+  font-size: 44px;
+  color: var(--xp-gold);
+  letter-spacing: 3px;
+  text-shadow:
+    0 0 8px rgba(241,196,15,0.7),
+    0 0 18px rgba(241,196,15,0.4),
+    4px 4px 0 rgba(0,0,0,0.6);
+  animation: cel-bob 0.9s steps(4, end) infinite;
+}
+.cel-amount span { font-size: 0.5em; margin-left: 6px; opacity: 0.9; }
+.cel-caption {
+  margin-top: 8px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: var(--gh-text-mute);
+}
+.cel-recipients {
+  display: flex; justify-content: center; gap: 14px;
+  padding: 4px 10px 14px;
+}
+.cel-recipient { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.cel-recipient .av {
+  width: 36px; height: 36px;
+  background: var(--gh-bg);
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow:
+    0 -3px 0 0 #2b1d00, 0 3px 0 0 #2b1d00,
+    -3px 0 0 0 #2b1d00, 3px 0 0 0 #2b1d00;
+}
+.cel-recipient .pts {
+  font-family: var(--font-pixel); font-size: 9px;
+  color: var(--xp-glow);
+  text-shadow: 0 0 6px rgba(110,226,102,0.6), 2px 2px 0 rgba(0,0,0,0.5);
+}
+.cel-recipient .pct {
+  font-family: var(--font-pixel); font-size: 7px;
+  color: #2b1d00; opacity: 0.7;
+}
+.cel-confetti {
+  position: absolute; pointer-events: none;
+  width: 10px; height: 10px;
+  top: -20px;
+  animation-name: cel-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: 1;
+}
+.cel-close-hint {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-pixel); font-size: 8px; letter-spacing: 1px;
+  color: rgba(255,255,255,0.6);
+  animation: cel-blink 1.1s steps(2, end) infinite;
+}
+@keyframes cel-spin { to { transform: rotate(360deg); } }
+@keyframes cel-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cel-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes cel-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes cel-blink { 0%,60% { opacity: 1; } 61%,100% { opacity: 0.4; } }
+@keyframes cel-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--cdx, 0), 110vh, 0) rotate(var(--crot, 720deg)); opacity: 0.9; }
+}
+`
+
+const CONFETTI_COLORS = ['#f1c40f', '#79c0ff', '#f778ba', '#3fb950', '#a371f7']
+
+function playLootDrop(pool: number, grants: { login: string; pct: number; points: number }[]) {
+  // If a previous celebration is still on screen, replace it.
+  document.getElementById(CELEBRATION_HOST_ID)?.remove()
+
+  const host = document.createElement('div')
+  host.id = CELEBRATION_HOST_ID
+  document.body.appendChild(host)
+  const shadow = host.attachShadow({ mode: 'open' })
+
+  const style = document.createElement('style')
+  style.textContent = FONT_FACE_CSS + pixelCss + CELEBRATION_CSS
+  shadow.appendChild(style)
+
+  const root = document.createElement('div')
+  root.className = 'cel-root'
+  shadow.appendChild(root)
+
+  // Rotating sun-rays
+  const rays = document.createElement('div')
+  rays.className = 'cel-rays'
+  root.appendChild(rays)
+
+  // Confetti
+  const COUNT = 28
+  for (let i = 0; i < COUNT; i++) {
+    const c = document.createElement('div')
+    c.className = 'cel-confetti'
+    const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]
+    const leftPct = Math.random() * 100
+    const dx = (Math.random() * 200 - 100) + 'px'
+    const rot = (Math.random() * 1080 - 360) + 'deg'
+    const dur = (1.6 + Math.random() * 1.6).toFixed(2) + 's'
+    const delay = (Math.random() * 0.4).toFixed(2) + 's'
+    c.style.cssText = `left:${leftPct}%;background:${color};animation-duration:${dur};animation-delay:${delay};--cdx:${dx};--crot:${rot};`
+    root.appendChild(c)
+  }
+
+  // Center panel
+  const panel = document.createElement('div')
+  panel.className = 'cel-panel'
+  panel.innerHTML = `
+    <div class="cel-panel-bar"><span>◆</span><span>LOOT DROP</span><span>◆</span></div>
+    <div class="cel-screen">
+      <div class="cel-amount">+${pool}<span>XP</span></div>
+      <div class="cel-caption">SPLIT ACROSS ${grants.length} REVIEWER${grants.length === 1 ? '' : 'S'}</div>
+    </div>
+    <div class="cel-recipients">
+      ${grants.map((g) => `
+        <div class="cel-recipient">
+          <span class="av">${identiconSvgString(g.login, 36)}</span>
+          <span class="pts">+${g.points}</span>
+          <span class="pct">${g.pct}%</span>
+        </div>
+      `).join('')}
+    </div>
+  `
+  root.appendChild(panel)
+
+  // Close hint
+  const hint = document.createElement('div')
+  hint.className = 'cel-close-hint'
+  hint.textContent = '▸ CLICK TO CLOSE ◂'
+  root.appendChild(hint)
+
+  // Dismiss handlers
+  const dismiss = () => host.remove()
+  root.addEventListener('click', dismiss)
+  document.addEventListener('keydown', function onKey(e) {
+    if (e.key === 'Escape') {
+      document.removeEventListener('keydown', onKey)
+      dismiss()
+    }
+  })
+  setTimeout(dismiss, 4500)
 }
 
 // ---------- bootstrap & turbo-nav re-injection ----------
