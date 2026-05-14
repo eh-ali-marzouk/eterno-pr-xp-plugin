@@ -11,7 +11,9 @@ import { readPrPageInfo } from './pr-page'
 import { identiconSvgString } from '../lib/identicon'
 import { iconSvg } from '../lib/pixel-icons'
 import pixelCss from '../styles/pixel.css?inline'
+import { version as PKG_VERSION } from '../../package.json'
 
+const PANEL_VERSION = `v${PKG_VERSION}`
 const PANEL_ID = 'pr-xp-panel'
 
 const SIDEBAR_SELECTORS = [
@@ -243,7 +245,7 @@ function cardShell(title: string, accent: string, children: (Node | string)[], t
   })
   card.appendChild(el('div', {
     style: `background:${accent};padding:8px 12px;display:flex;align-items:center;gap:8px;color:${fgOnAccent};font-family:var(--font-pixel);font-size:9px;letter-spacing:1px`,
-    html: `${iconSvg('bolt', 12, fgOnAccent)}<span style="flex:1">${title}</span><span style="opacity:0.6;font-size:8px">v1</span>`
+    html: `${iconSvg('bolt', 12, fgOnAccent)}<span style="flex:1">${title}</span><span style="opacity:0.6;font-size:8px">${PANEL_VERSION}</span>`
   }))
   const body = el('div', { style: 'padding:12px' })
   for (const c of children) body.append(c)
@@ -866,9 +868,12 @@ async function refreshImpl() {
   }
 }
 
+let lastMerged: boolean | null = null
+
 function tick() {
   if (location.href !== lastHref) {
     lastHref = location.href
+    lastMerged = null
     document.getElementById(PANEL_ID)?.remove()
     shadowRoot = null
     state.pr = null
@@ -878,13 +883,47 @@ function tick() {
     state.mode = 'view'
     state.error = null
     void refresh()
-  } else if (!document.getElementById(PANEL_ID)) {
+    return
+  }
+
+  if (!document.getElementById(PANEL_ID)) {
     render()
+  }
+
+  // Detect when GitHub itself flips the PR's merged state in the DOM
+  // (e.g. user merges in another tab, or someone else merges while
+  // we're viewing). Re-fetch so the card moves from "up for grabs" →
+  // "awaiting drop" without a hard reload.
+  const info = readPrPageInfo()
+  if (info) {
+    const merged = !!info.isMerged
+    if (lastMerged !== null && lastMerged !== merged) void refresh()
+    lastMerged = merged
   }
 }
 
 void refresh()
 new MutationObserver(tick).observe(document.body, { childList: true, subtree: true })
+
+// Re-fetch when the user returns to the tab — backend state (someone
+// distributing XP, pool edits) won't reflect in the DOM, so the only
+// way to learn about it without spamming the network is to poll on
+// signals that mean "the user is looking at this".
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.mode === 'view') {
+    void refresh()
+  }
+})
+
+// Light heartbeat poll while the tab is visible and the user isn't
+// mid-edit. Catches the case where a teammate distributes XP to the
+// current viewer mid-session.
+const POLL_INTERVAL_MS = 45_000
+setInterval(() => {
+  if (document.visibilityState !== 'visible') return
+  if (state.mode !== 'view') return
+  void refresh()
+}, POLL_INTERVAL_MS)
 
 send({ type: 'PING' })
   .then((r) => console.log('[review-master] bg says', r))
