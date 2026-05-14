@@ -139,7 +139,7 @@ async function prGetOrCreate(
 
   const inserted = await supabase
     .from('prs')
-    .insert({ repo, pr_number, author_github_login, xp_pool: 0 })
+    .insert({ repo, pr_number, author_github_login, xp_pool: 100 })
     .select('*')
     .single()
   if (inserted.error) {
