@@ -6,11 +6,46 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <main id="app">
+    <header>
       <h1>PR XP</h1>
-      <p id="status">Loading…</p>
-      <button id="primary" hidden></button>
-      <p id="error" class="error" hidden></p>
+      <nav id="tabs">
+        <button data-tab="account" class="tab active">Account</button>
+        <button data-tab="leaderboard" class="tab">Leaderboard</button>
+      </nav>
+    </header>
+    <main>
+      <section id="tab-account" class="tab-panel">
+        <p id="status">Loading…</p>
+        <button id="primary" hidden></button>
+
+        <div id="token-section" hidden>
+          <p id="token-status" class="hint"></p>
+
+          <div id="token-saved" hidden>
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <span id="token-saved-text" class="hint"></span>
+              <button id="token-clear" class="secondary">Replace…</button>
+            </div>
+          </div>
+
+          <div id="token-input-wrap" hidden>
+            <label for="token-input">GitHub fine-grained PAT</label>
+            <p class="hint">Needed to fetch reviewers/commenters when distributing XP. Scopes: read-only public_repo (or repo contents/pull-request metadata if private).</p>
+            <input id="token-input" type="password" placeholder="github_pat_…" autocomplete="off" />
+            <div class="row">
+              <button id="token-save">Save token</button>
+              <button id="token-cancel" class="secondary" hidden>Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <p id="error" class="error" hidden></p>
+      </section>
+
+      <section id="tab-leaderboard" class="tab-panel" hidden>
+        <p id="leaderboard-status" class="hint">Loading…</p>
+        <ol id="leaderboard-list"></ol>
+      </section>
     </main>
     <script type="module" src="./popup.ts"></script>
   </body>
