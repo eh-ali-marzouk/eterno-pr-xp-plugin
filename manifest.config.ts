@@ -6,9 +6,21 @@ export default defineManifest({
   name: 'Review-Master',
   description: pkg.description,
   version: pkg.version,
+  icons: {
+    16: 'src/assets/icons/icon-16.png',
+    32: 'src/assets/icons/icon-32.png',
+    48: 'src/assets/icons/icon-48.png',
+    128: 'src/assets/icons/icon-128.png'
+  },
   action: {
     default_popup: 'src/popup/popup.html',
-    default_title: 'Review-Master'
+    default_title: 'Review-Master',
+    default_icon: {
+      16: 'src/assets/icons/icon-16.png',
+      32: 'src/assets/icons/icon-32.png',
+      48: 'src/assets/icons/icon-48.png',
+      128: 'src/assets/icons/icon-128.png'
+    }
   },
   permissions: ['storage', 'identity', 'activeTab'],
   host_permissions: [
