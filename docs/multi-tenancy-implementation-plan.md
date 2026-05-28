@@ -117,10 +117,10 @@ Signed in with a `read:org` PAT, both should resolve/return your team. Verify in
 
 ## Step 5 — Popup (design §7.1)
 
-- [ ] On load, after `AUTH_GET_USER` succeeds, send `TEAM_RESOLVE` then `TEAM_GET`.
-- [ ] Render the team name in the leaderboard header (e.g. `"${team.name} — Top Reviewers"`).
-- [ ] When `team` is null, render the hint: `"Not in a pilot team — ensure your PAT has read:org, or contact your admin."`
-- [ ] Leave `loadLeaderboard()` / `LEADERBOARD_GET` **unchanged** — RLS already scopes rows.
+- [x] On load, after `AUTH_GET_USER` succeeds, send `TEAM_RESOLVE` then `TEAM_GET`. — via `refreshTeam()` in the post-auth `Promise.all`.
+- [x] Render the team name in the leaderboard header (e.g. `"${team.name} — Top Reviewers"`). — `"${team.name} — GLOBAL TOP 100"` (existing suffix preserved).
+- [x] When `team` is null, render the hint: `"Not in a pilot team — ensure your PAT has read:org, or contact your admin."`
+- [x] Leave `loadLeaderboard()` / `LEADERBOARD_GET` **unchanged** — RLS already scopes rows. — untouched.
 
 🧪 **Test in both browsers:** Build and reload. Open the popup in **both** Chrome and Firefox: confirm the header shows your team name and the leaderboard lists only your team's rows. Temporarily test the null state (e.g. a token without `read:org` on an account with no resolvable team) and confirm the hint renders. Check light + dark themes.
 
@@ -179,6 +179,6 @@ Run the full §9 checklist. The core guarantee is **isolation** — verify it bo
 - [x] `src/lib/messages.ts` (`TEAM_GET`/`TEAM_RESOLVE`, `TeamRow`, `LeaderboardRow.team_id?`)
 - [x] `src/lib/github.ts` (`fetchUserOrgs`)
 - [x] `src/background/background.ts` (`teamGet`, `teamResolve`, switch cases, friendly error)
-- [ ] `src/popup/popup.ts` (resolve team on load; team name in header)
+- [x] `src/popup/popup.ts` (resolve team on load; team name in header)
 - [ ] `src/content/content.ts` (`TEAM_RESOLVE` before `PR_GET_OR_CREATE`; "not in pilot" state)
 - [ ] `ONBOARDING.md` (new — pilot install guide, Chrome **and** Firefox)
