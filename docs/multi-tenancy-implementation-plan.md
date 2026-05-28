@@ -138,8 +138,8 @@ Signed in with a `read:org` PAT, both should resolve/return your team. Verify in
 
 ## Step 7 — `ONBOARDING.md` deliverable (design §8)
 
-- [ ] Create `ONBOARDING.md` at repo root covering: Install (Chrome **and** Firefox), GitHub OAuth sign-in, adding a PAT with **`read:org`**, team auto-detection explanation, daily use, and troubleshooting ("Not in a pilot team" / "Org not part of the pilot").
-- [ ] Ensure the install section gives **both** Chrome (`npm run package` → `releases/review-master-<version>-chrome.zip`, Load Unpacked) **and** Firefox (Load Temporary Add-on at `about:debugging`) instructions — the design's §8 text leans Chrome; add the Firefox path to match this extension's dual-browser support.
+- [x] Create `ONBOARDING.md` at repo root covering: Install (Chrome **and** Firefox), GitHub OAuth sign-in, adding a PAT with **`read:org`**, team auto-detection explanation, daily use, and troubleshooting ("Not in a pilot team" / "Org not part of the pilot").
+- [x] Ensure the install section gives **both** Chrome (`npm run package` → `releases/review-master-<version>-chrome.zip`, Load Unpacked) **and** Firefox (Load Temporary Add-on at `about:debugging`) instructions — the design's §8 text leans Chrome; add the Firefox path to match this extension's dual-browser support.
 
 🧪 **Test in both browsers:** Follow your own `ONBOARDING.md` from scratch — do a clean install in Chrome and in Firefox exactly as written. Fix any step that doesn't work in either browser.
 
@@ -181,4 +181,4 @@ Run the full §9 checklist. The core guarantee is **isolation** — verify it bo
 - [x] `src/background/background.ts` (`teamGet`, `teamResolve`, switch cases, friendly error)
 - [x] `src/popup/popup.ts` (resolve team on load; team name in header)
 - [x] `src/content/content.ts` (`TEAM_RESOLVE` before `PR_GET_OR_CREATE`; "not in pilot" state)
-- [ ] `ONBOARDING.md` (new — pilot install guide, Chrome **and** Firefox)
+- [x] `ONBOARDING.md` (new — pilot install guide, Chrome **and** Firefox)
