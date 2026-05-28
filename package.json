@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/patch-manifest.mjs",
+    "package": "npm run build && node scripts/package.mjs",
     "types:db": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID --schema public > src/types/database.ts"
   },
   "dependencies": {
