@@ -89,9 +89,9 @@ Create four migration files under `supabase/migrations/` with the `20260528` pre
 
 ## Step 3 — Messages + GitHub lib (design §6.1, §6.2)
 
-- [ ] **§6.1** `src/lib/messages.ts`: add `{ type: 'TEAM_GET' }` and `{ type: 'TEAM_RESOLVE' }` to the `Message` union; add the `TeamRow` type (`id`, `name`, `github_org`); add optional `team_id?: number` to `LeaderboardRow`.
-- [ ] **§6.2** `src/lib/github.ts`: add `fetchUserOrgs(token)` reusing `ghFetch`; it returns lowercased org logins and `[]` on failure (PAT lacks `read:org`).
-- [ ] Confirm `npm run build` compiles.
+- [x] **§6.1** `src/lib/messages.ts`: add `{ type: 'TEAM_GET' }` and `{ type: 'TEAM_RESOLVE' }` to the `Message` union; add the `TeamRow` type (`id`, `name`, `github_org`); add optional `team_id?: number` to `LeaderboardRow`.
+- [x] **§6.2** `src/lib/github.ts`: add `fetchUserOrgs(token)` reusing `ghFetch`; it returns lowercased org logins and `[]` on failure (PAT lacks `read:org`).
+- [x] Confirm `npm run build` compiles. — clean.
 
 🧪 **Test in both browsers:** Build and reload in Chrome and Firefox. These are type/helper additions with no UI wiring yet — confirm the extension still loads cleanly and the existing widget + popup behave exactly as the Step 0 baseline in **both** browsers.
 
@@ -176,8 +176,8 @@ Run the full §9 checklist. The core guarantee is **isolation** — verify it bo
 - [x] `supabase/migrations/20260528000003_rls_team_scope.sql` (new — incl. `profiles_update_self`)
 - [x] `supabase/migrations/20260528000004_leaderboard_team.sql` (new)
 - [x] `src/types/database.ts` (regenerated)
-- [ ] `src/lib/messages.ts` (`TEAM_GET`/`TEAM_RESOLVE`, `TeamRow`, `LeaderboardRow.team_id?`)
-- [ ] `src/lib/github.ts` (`fetchUserOrgs`)
+- [x] `src/lib/messages.ts` (`TEAM_GET`/`TEAM_RESOLVE`, `TeamRow`, `LeaderboardRow.team_id?`)
+- [x] `src/lib/github.ts` (`fetchUserOrgs`)
 - [ ] `src/background/background.ts` (`teamGet`, `teamResolve`, switch cases, friendly error)
 - [ ] `src/popup/popup.ts` (resolve team on load; team name in header)
 - [ ] `src/content/content.ts` (`TEAM_RESOLVE` before `PR_GET_OR_CREATE`; "not in pilot" state)

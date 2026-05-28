@@ -16,6 +16,8 @@ export type Message =
   | { type: 'GH_TOKEN_SET'; token: string }
   | { type: 'GH_TOKEN_CLEAR' }
   | { type: 'GH_TOKEN_VALIDATE' }
+  | { type: 'TEAM_GET' }
+  | { type: 'TEAM_RESOLVE' }
 
 export type Response<T = unknown> =
   | { ok: true; data?: T }
@@ -49,9 +51,16 @@ export type GrantRow = {
   created_at: string
 }
 
+export type TeamRow = {
+  id: number
+  name: string
+  github_org: string
+}
+
 export type LeaderboardRow = {
   recipient_github_login: string
   total: number
+  team_id?: number
 }
 
 export type TokenStatus =
