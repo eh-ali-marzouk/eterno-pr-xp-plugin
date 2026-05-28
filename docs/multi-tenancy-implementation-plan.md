@@ -71,7 +71,7 @@ Create four migration files under `supabase/migrations/` with the `20260528` pre
 - [x] **§4.2** `20260528000002_team_triggers.sql` — `prs_set_team()` (derives team from `lower(split_part(repo,'/',1))`, rejects non-pilot orgs with `check_violation`, latches author's `profiles.team_id`) + its BEFORE INSERT trigger; `xp_grants_set_team()` (copies parent PR's `team_id`) + its trigger.
 - [x] **§4.3** `20260528000003_rls_team_scope.sql` — `my_team_id()` (security definer); `teams_select_own`; drop the three `*_select_authenticated` policies and replace with team-scoped `profiles_select_team` / `prs_select_team` / `xp_grants_select_team`; tighten `prs_insert_author` (author **and** repo org == caller's team). **Also add the `profiles_update_self` policy from the §6.3 RLS note** — without it the client-side team latch in Step 4 is denied. — `profiles_update_self` included.
 - [x] **§4.4** `20260528000004_leaderboard_team.sql` — drop & recreate `leaderboard` with `team_id` and `with (security_invoker = true)`; `grant select ... to authenticated`.
-- [ ] Apply all four in order against the Supabase project (local/branch first if available). Confirm: `teams` has the pilot rows; `team_id` columns, triggers, `my_team_id()`, the new policies, and the new view all exist. — ⏳ requires user-side Supabase access (see Step 0 note).
+- [x] Apply all four in order against the Supabase project (local/branch first if available). Confirm: `teams` has the pilot rows; `team_id` columns, triggers, `my_team_id()`, the new policies, and the new view all exist. — applied cleanly by user (migration 1 reworked to be idempotent + bulletproof first).
 
 🧪 **Test in both browsers:** No browser-loadable change yet. Instead verify in the Supabase SQL editor that migrations applied cleanly and the objects above exist. Do **not** rebuild/reload the extension yet — the generated types are stale until Step 2, and the UI is unwired until Steps 4–6.
 
@@ -79,9 +79,9 @@ Create four migration files under `supabase/migrations/` with the `20260528` pre
 
 ## Step 2 — Regenerate DB types (design §5)
 
-- [ ] Run `npm run types:db` to regenerate `src/types/database.ts` (adds `teams`, the `team_id` columns, and the new `leaderboard` shape `team_id, recipient_github_login, total`).
-- [ ] If the Supabase CLI/env isn't wired, hand-edit `src/types/database.ts` to mirror the schema from §4 exactly.
-- [ ] Confirm `npm run build` type-checks against the regenerated types.
+- [x] Run `npm run types:db` to regenerate `src/types/database.ts` (adds `teams`, the `team_id` columns, and the new `leaderboard` shape `team_id, recipient_github_login, total`). — done by user; CLI was wired.
+- [x] If the Supabase CLI/env isn't wired, hand-edit `src/types/database.ts` to mirror the schema from §4 exactly. — N/A, CLI gen succeeded.
+- [x] Confirm `npm run build` type-checks against the regenerated types. — clean build.
 
 🧪 **Test in both browsers:** Build and reload `dist/` in Chrome and Firefox. No behavior change is expected yet — this step's goal is **no new console errors / no type regressions** in either browser's background and content contexts.
 
@@ -175,7 +175,7 @@ Run the full §9 checklist. The core guarantee is **isolation** — verify it bo
 - [x] `supabase/migrations/20260528000002_team_triggers.sql` (new)
 - [x] `supabase/migrations/20260528000003_rls_team_scope.sql` (new — incl. `profiles_update_self`)
 - [x] `supabase/migrations/20260528000004_leaderboard_team.sql` (new)
-- [ ] `src/types/database.ts` (regenerated)
+- [x] `src/types/database.ts` (regenerated)
 - [ ] `src/lib/messages.ts` (`TEAM_GET`/`TEAM_RESOLVE`, `TeamRow`, `LeaderboardRow.team_id?`)
 - [ ] `src/lib/github.ts` (`fetchUserOrgs`)
 - [ ] `src/background/background.ts` (`teamGet`, `teamResolve`, switch cases, friendly error)
