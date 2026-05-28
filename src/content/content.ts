@@ -5,7 +5,8 @@ import type {
   GrantRow,
   Message,
   PrRow,
-  Response
+  Response,
+  TeamRow
 } from '../lib/messages'
 import { readPrPageInfo } from './pr-page'
 import { identiconSvgString } from '../lib/identicon'
@@ -1066,6 +1067,11 @@ async function refreshImpl() {
     render()
     return
   }
+
+  // Latch this author's team server-side before the PR insert. A brand-new
+  // author whose profiles.team_id is null must be resolved first, or the
+  // insert's RLS check fails. We don't need the result — just don't crash.
+  await send<TeamRow | null>({ type: 'TEAM_RESOLVE' }).catch(() => undefined)
 
   const prRes = await send<PrRow | null>({
     type: 'PR_GET_OR_CREATE',

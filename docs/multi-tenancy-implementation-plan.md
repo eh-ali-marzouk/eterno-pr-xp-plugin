@@ -128,9 +128,9 @@ Signed in with a `read:org` PAT, both should resolve/return your team. Verify in
 
 ## Step 6 — Content script (design §7.2)
 
-- [ ] In `refresh()`, send `TEAM_RESOLVE` **before** `PR_GET_OR_CREATE` (latches a first-time author before the PR insert — see the §4.3 edge case).
-- [ ] Handle the "org not in pilot" error from `PR_GET_OR_CREATE`: show a small read-only message in the widget, do **not** crash, and keep the existing floating-panel fallback (memory: `feedback_dom_injection_fallback`).
-- [ ] Confirm `npm run build` compiles.
+- [x] In `refresh()`, send `TEAM_RESOLVE` **before** `PR_GET_OR_CREATE` (latches a first-time author before the PR insert — see the §4.3 edge case). — awaited with `.catch` so it can't block.
+- [x] Handle the "org not in pilot" error from `PR_GET_OR_CREATE`: show a small read-only message in the widget, do **not** crash, and keep the existing floating-panel fallback (memory: `feedback_dom_injection_fallback`). — flows through the existing read-only `state.error && !state.pr` branch; editable controls gated behind `!state.error`; fallback untouched.
+- [x] Confirm `npm run build` compiles. — clean.
 
 🧪 **Test in both browsers:** Build and reload. On a PR in a **seeded** org, confirm the widget loads and the XP pool works in **both** browsers. On a PR in a **non-seeded** org, confirm the friendly "not in pilot" read-only state shows and nothing crashes. Verify the floating-panel fallback still appears when the primary anchor is missing — in both Chrome and Firefox.
 
@@ -180,5 +180,5 @@ Run the full §9 checklist. The core guarantee is **isolation** — verify it bo
 - [x] `src/lib/github.ts` (`fetchUserOrgs`)
 - [x] `src/background/background.ts` (`teamGet`, `teamResolve`, switch cases, friendly error)
 - [x] `src/popup/popup.ts` (resolve team on load; team name in header)
-- [ ] `src/content/content.ts` (`TEAM_RESOLVE` before `PR_GET_OR_CREATE`; "not in pilot" state)
+- [x] `src/content/content.ts` (`TEAM_RESOLVE` before `PR_GET_OR_CREATE`; "not in pilot" state)
 - [ ] `ONBOARDING.md` (new — pilot install guide, Chrome **and** Firefox)
