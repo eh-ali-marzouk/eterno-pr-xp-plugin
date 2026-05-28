@@ -99,12 +99,12 @@ Create four migration files under `supabase/migrations/` with the `20260528` pre
 
 ## Step 4 — Background handlers (design §6.3, §6.4)
 
-- [ ] **§6.4** Imports: add `fetchUserOrgs` to the `../lib/github` import; add `TeamRow` to the `messages` import.
-- [ ] **§6.3** Add switch cases `TEAM_GET → teamGet()` and `TEAM_RESOLVE → teamResolve(msg)` to the router.
-- [ ] Add `teamGet()` — reads the caller's own `profiles` row joined to `teams` (allowed by `profiles_select_team`'s `id = auth.uid()` clause).
-- [ ] Add `teamResolve(msg)` — return early if already resolved; else match `fetchUserOrgs` against `teams.github_org`, then latch via `profiles.update({team_id}).eq('id', uid)` (requires `profiles_update_self` from Step 1).
-- [ ] Map the trigger's `check_violation` error to a friendly message: if an insert error contains `not part of the pilot`, return `{ ok: false, error: 'Your GitHub org is not part of the pilot.' }`.
-- [ ] Confirm `prGetOrCreate` / `prDistribute` were **not** given any `team_id` logic — the DB triggers own it.
+- [x] **§6.4** Imports: add `fetchUserOrgs` to the `../lib/github` import; add `TeamRow` to the `messages` import.
+- [x] **§6.3** Add switch cases `TEAM_GET → teamGet()` and `TEAM_RESOLVE → teamResolve(msg)` to the router.
+- [x] Add `teamGet()` — reads the caller's own `profiles` row joined to `teams` (allowed by `profiles_select_team`'s `id = auth.uid()` clause).
+- [x] Add `teamResolve(msg)` — return early if already resolved; else match `fetchUserOrgs` against `teams.github_org`, then latch via `profiles.update({team_id}).eq('id', uid)` (requires `profiles_update_self` from Step 1).
+- [x] Map the trigger's `check_violation` error to a friendly message: if an insert error contains `not part of the pilot`, return `{ ok: false, error: 'Your GitHub org is not part of the pilot.' }`.
+- [x] Confirm `prGetOrCreate` / `prDistribute` were **not** given any `team_id` logic — the DB triggers own it. — confirmed, only the profile self-latch writes team_id.
 
 🧪 **Test in both browsers:** Build and reload. In **each** browser's background console, manually exercise the new messages, e.g.:
 ```js
@@ -178,7 +178,7 @@ Run the full §9 checklist. The core guarantee is **isolation** — verify it bo
 - [x] `src/types/database.ts` (regenerated)
 - [x] `src/lib/messages.ts` (`TEAM_GET`/`TEAM_RESOLVE`, `TeamRow`, `LeaderboardRow.team_id?`)
 - [x] `src/lib/github.ts` (`fetchUserOrgs`)
-- [ ] `src/background/background.ts` (`teamGet`, `teamResolve`, switch cases, friendly error)
+- [x] `src/background/background.ts` (`teamGet`, `teamResolve`, switch cases, friendly error)
 - [ ] `src/popup/popup.ts` (resolve team on load; team name in header)
 - [ ] `src/content/content.ts` (`TEAM_RESOLVE` before `PR_GET_OR_CREATE`; "not in pilot" state)
 - [ ] `ONBOARDING.md` (new — pilot install guide, Chrome **and** Firefox)
