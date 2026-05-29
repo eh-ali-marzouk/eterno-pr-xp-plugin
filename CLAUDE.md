@@ -73,6 +73,7 @@ Build output goes to `dist/`.
   - `profiles`: latched by the `prs` trigger (authors) and by the `TEAM_RESOLVE` message (reviewers, via GitHub `/user/orgs`).
 - **Team resolution** happens client-side via `TEAM_RESOLVE`: the background reads the user's PAT, calls GitHub `/user/orgs` (**requires `read:org`**), matches an org against `teams.github_org`, and latches `profiles.team_id` (allowed by `profiles_update_self`). Both the popup (on load) and the content script (in `refresh()`, before `PR_GET_OR_CREATE`) send it.
 - **Known gap:** a user whose PAT lacks `read:org` cannot be auto-resolved at all — including a first-time *author* (the tightened `prs_insert_author` check requires `my_team_id()` to already match the repo org). The design's optional repo-owner fallback (`msg.repoOwner`) is **not implemented**.
+- **Known gap (auth redirect, pilot-only — TODO tighten):** the OAuth redirect URL isn't stable per install (Chrome unpacked id varies by folder path; Firefox uses a random per-install UUID), so the hosted Supabase **Auth → Redirect URLs** allow-list uses broad wildcards (`https://*.chromiumapp.org/`, `https://*.extensions.allizom.org/`). Acceptable only for the closed pilot. Before production: pin the Chrome id via a manifest `"key"` and replace with exact URLs. Site URL fallback is `:49283` (moved off `:3000`). Full detail in `docs/DEVELOPER_MANUAL.md` §4.2.
 
 ## RLS rules
 

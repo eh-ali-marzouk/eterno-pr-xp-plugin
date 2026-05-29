@@ -134,6 +134,21 @@ user?.user_metadata?.user_name ?? user?.user_metadata?.preferred_username ?? nul
 ```
 `currentGithubLogin()` is the helper wrapping this.
 
+> **Redirect-URL allow-list (pilot setup — TODO: tighten before production).** The
+> redirect from `getRedirectURL()` is **not stable per install**: Chrome derives the
+> extension id from the unpacked folder path (differs per developer/machine unless a
+> manifest `"key"` pins it), and Firefox returns `https://<random-per-install-UUID>.extensions.allizom.org/`
+> (cannot be pre-registered at all). Because exact URLs aren't enumerable, the hosted
+> Supabase project's **Auth → URL Configuration → Redirect URLs** is currently set with
+> **wildcards**: `https://*.chromiumapp.org/` (Chrome) and `https://*.extensions.allizom.org/`
+> (Firefox). This is intentionally broad — it accepts any extension's redirect on those
+> domains — and is acceptable only for the closed pilot.
+> **Before production:** pin the Chrome id with a manifest `"key"` and replace the Chrome
+> wildcard with the one exact `https://<id>.chromiumapp.org/` URL; revisit the Firefox
+> entry (signed-AMO id, or a different redirect strategy) to drop its wildcard too.
+> The Site URL fallback is `http://127.0.0.1:49283` (was `:3000`, moved to avoid colliding
+> with developers' local dev servers — see `supabase/config.toml`).
+
 ### 4.3 Supabase client (`src/lib/supabase.ts`)
 
 `createClient<Database>(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, { auth: { storage: extStorage,
