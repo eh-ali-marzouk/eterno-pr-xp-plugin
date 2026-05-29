@@ -78,3 +78,14 @@ export async function fetchPrParticipants(
   set.delete(author)
   return [...set].sort((a, b) => a.localeCompare(b))
 }
+
+// Orgs the PAT's user belongs to. Requires the `read:org` scope; returns [] if
+// the token lacks it (caller falls back to repo-owner derivation).
+export async function fetchUserOrgs(token: string): Promise<string[]> {
+  try {
+    const orgs = await ghFetch<Array<{ login: string }>>('/user/orgs?per_page=100', token)
+    return orgs.map((o) => o.login.toLowerCase())
+  } catch {
+    return []
+  }
+}

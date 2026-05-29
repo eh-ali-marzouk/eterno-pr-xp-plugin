@@ -8,11 +8,13 @@ import type {
   Message,
   PrRow,
   Response,
+  TeamRow,
   TokenStatus
 } from '../lib/messages'
 import {
   clearStoredToken,
   fetchPrParticipants,
+  fetchUserOrgs,
   getStoredToken,
   setStoredToken,
   validateToken
@@ -51,6 +53,10 @@ browser.runtime.onMessage.addListener(
         return clearStoredToken().then(() => ({ ok: true }))
       case 'GH_TOKEN_VALIDATE':
         return ghTokenValidate()
+      case 'TEAM_GET':
+        return teamGet()
+      case 'TEAM_RESOLVE':
+        return teamResolve(msg)
       default:
         return Promise.resolve({ ok: false, error: 'unknown message' })
     }
@@ -154,6 +160,9 @@ async function prGetOrCreate(
         .maybeSingle()
       if (after.error) return { ok: false, error: after.error.message }
       if (after.data) return { ok: true, data: after.data as PrRow }
+    }
+    if (inserted.error.message.includes('not part of the pilot')) {
+      return { ok: false, error: 'Your GitHub org is not part of the pilot.' }
     }
     return { ok: false, error: inserted.error.message }
   }
@@ -263,6 +272,52 @@ async function ghTokenValidate(): Promise<Response<TokenStatus>> {
   const result = await validateToken(token)
   if (result.valid) return { ok: true, data: { state: 'valid', login: result.login } }
   return { ok: true, data: { state: 'invalid', error: result.error ?? 'unknown' } }
+}
+
+async function teamGet(): Promise<Response<TeamRow | null>> {
+  const { data: me } = await supabase.auth.getUser()
+  const uid = me.user?.id
+  if (!uid) return { ok: true, data: null }
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('team_id, teams ( id, name, github_org )')
+    .eq('id', uid)
+    .maybeSingle()
+  if (error) return { ok: false, error: error.message }
+  const team = (data?.teams ?? null) as TeamRow | null
+  return { ok: true, data: team }
+}
+
+// Resolve and latch the caller's profiles.team_id.
+// Strategy: (1) if already set, return it; (2) match a GitHub org from /user/orgs
+// against teams.github_org; (3) else null (caller shows the "not in pilot" hint).
+async function teamResolve(_msg: Extract<Message, { type: 'TEAM_RESOLVE' }>): Promise<Response<TeamRow | null>> {
+  const { data: me } = await supabase.auth.getUser()
+  const uid = me.user?.id
+  if (!uid) return { ok: true, data: null }
+
+  // Already resolved?
+  const existing = await teamGet()
+  if (existing.ok && existing.data) return existing
+
+  const token = await getStoredToken()
+  if (!token) return { ok: true, data: null }
+
+  const orgs = await fetchUserOrgs(token)          // lowercased
+  if (orgs.length === 0) return { ok: true, data: null }
+
+  // Find the first pilot team matching one of the user's orgs.
+  const { data: teams, error } = await supabase
+    .from('teams')
+    .select('id, name, github_org')
+    .in('github_org', orgs)
+  if (error) return { ok: false, error: error.message }
+  const team = (teams?.[0] ?? null) as TeamRow | null
+  if (!team) return { ok: true, data: null }
+
+  const upd = await supabase.from('profiles').update({ team_id: team.id }).eq('id', uid)
+  if (upd.error) return { ok: false, error: upd.error.message }
+  return { ok: true, data: team }
 }
 
 function errMsg(err: unknown): string {

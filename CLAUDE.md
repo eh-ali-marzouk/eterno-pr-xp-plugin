@@ -2,7 +2,11 @@
 
 ## What this is
 
-A cross-browser (Chrome + Firefox) MV3 extension that gamifies GitHub code review for a 10-person engineering team. PR authors set an XP pool on each PR; after merge, the author distributes those XP among reviewers/commenters by percentage. Totals roll up into a team leaderboard.
+A cross-browser (Chrome + Firefox) MV3 extension ("Review-Master") that gamifies GitHub code review. PR authors set an XP pool on each PR; after merge, the author distributes those XP among reviewers/commenters by percentage. Totals roll up into a **per-team** leaderboard.
+
+The extension is **multi-tenant**: a "team" is a GitHub org (the repo owner), and each org's PRs, grants, profiles, and leaderboard are fully isolated by Postgres RLS. See `docs/multi-tenancy-design.md` for the locked design and `docs/multi-tenancy-implementation-plan.md` for the step-by-step state.
+
+> **Deep dive:** `docs/DEVELOPER_MANUAL.md` is the authoritative, file-by-file guide for picking up work on this codebase. Read it before non-trivial changes. Pilot install instructions live in `ONBOARDING.md` at the repo root.
 
 ## Stack
 
@@ -16,14 +20,27 @@ A cross-browser (Chrome + Firefox) MV3 extension that gamifies GitHub code revie
 
 ```
 src/
-├── content/content.ts        # injected on github.com/*/*/pull/*
-├── background/background.ts  # event page / service worker, holds Supabase client
-├── popup/                    # login + leaderboard UI
+├── content/
+│   ├── content.ts            # injected widget on github.com/*/*/pull/*; plain DOM + shadow root
+│   └── pr-page.ts            # parses repo / pr_number / author / merged-state from the DOM+URL
+├── background/background.ts  # event page / service worker; ONLY holder of the Supabase client
+├── popup/
+│   ├── popup.ts              # connect | profile | leaderboard views
+│   ├── popup.html
+│   └── popup.css
 ├── lib/
-│   ├── supabase.ts           # typed client
-│   ├── github.ts             # GitHub REST calls
-│   └── messages.ts           # discriminated union of message types
+│   ├── supabase.ts           # typed client (PKCE, session in storage.local via ext-storage)
+│   ├── ext-storage.ts        # SupportedStorage adapter backing Supabase auth to storage.local
+│   ├── github.ts             # GitHub REST calls + PAT storage helpers
+│   ├── messages.ts           # discriminated Message union + Response<T> + row types
+│   └── identicon.ts          # deterministic pixel-art avatars
+├── styles/                   # pixel.css (component lib + GitHub CSS vars), fonts.css
+├── assets/                   # icons + woff2 pixel fonts
 └── types/database.ts         # generated via `npm run types:db`
+supabase/migrations/          # SQL migrations (20260514* core, 20260528* multi-tenancy)
+scripts/
+├── patch-manifest.mjs        # post-build: injects background.scripts for Firefox
+└── package.mjs               # zips dist/ into releases/review-master-<ver>-{chrome,firefox}.zip
 manifest.config.ts            # typed manifest, dual Chrome/Firefox background
 vite.config.ts
 ```
@@ -42,23 +59,38 @@ Build output goes to `dist/`.
 
 ## Data model (Supabase)
 
-- `profiles` — `id` (uuid, FK auth.users), `github_login` unique, `display_name`
-- `prs` — `id`, `repo`, `pr_number`, `author_github_login`, `xp_pool` int, `status` ('open' | 'distributed'), unique on (repo, pr_number)
-- `xp_grants` — `id`, `pr_id` FK, `recipient_github_login`, `points` int, `percentage` int, `granted_by` FK profiles
-- Leaderboard view: `select recipient_github_login, sum(points) total from xp_grants group by 1`
+- `teams` — `id` (bigserial), `name`, `github_org` unique (lowercased repo owner). Seeded manually (pilot orgs). **The tenant boundary.**
+- `profiles` — `id` (uuid, FK auth.users), `github_login` unique, `display_name`, `team_id` FK→teams (**nullable** — unassigned until resolved)
+- `prs` — `id`, `repo`, `pr_number`, `author_github_login`, `xp_pool` int (default 100), `status` ('open' | 'distributed'), `team_id` FK→teams (**NOT NULL**, server-derived), unique on (repo, pr_number)
+- `xp_grants` — `id`, `pr_id` FK, `recipient_github_login`, `points` int, `percentage` int, `granted_by` FK profiles, `team_id` FK→teams (**NOT NULL**, inherited from PR)
+- Leaderboard view: `select team_id, recipient_github_login, sum(points)::int total from xp_grants group by team_id, recipient_github_login` — runs `security_invoker = true` so the caller's `xp_grants` RLS applies.
+
+## Multi-tenancy (the trust boundary)
+
+- **`team_id` is NEVER sent by the client.** The DB derives and enforces it:
+  - `prs`: a `BEFORE INSERT` trigger (`prs_set_team`) derives team from `lower(split_part(repo,'/',1))`, rejects non-pilot orgs (`check_violation`, surfaced as "Your GitHub org is not part of the pilot."), and latches the author's `profiles.team_id`.
+  - `xp_grants`: a `BEFORE INSERT` trigger (`xp_grants_set_team`) copies the parent PR's `team_id`.
+  - `profiles`: latched by the `prs` trigger (authors) and by the `TEAM_RESOLVE` message (reviewers, via GitHub `/user/orgs`).
+- **Team resolution** happens client-side via `TEAM_RESOLVE`: the background reads the user's PAT, calls GitHub `/user/orgs` (**requires `read:org`**), matches an org against `teams.github_org`, and latches `profiles.team_id` (allowed by `profiles_update_self`). Both the popup (on load) and the content script (in `refresh()`, before `PR_GET_OR_CREATE`) send it.
+- **Known gap:** a user whose PAT lacks `read:org` cannot be auto-resolved at all — including a first-time *author* (the tightened `prs_insert_author` check requires `my_team_id()` to already match the repo org). The design's optional repo-owner fallback (`msg.repoOwner`) is **not implemented**.
+- **Known gap (auth redirect, pilot-only — TODO tighten):** the OAuth redirect URL isn't stable per install (Chrome unpacked id varies by folder path; Firefox uses a random per-install UUID), so the hosted Supabase **Auth → Redirect URLs** allow-list uses broad wildcards (`https://*.chromiumapp.org/`, `https://*.extensions.allizom.org/`). Acceptable only for the closed pilot. Before production: pin the Chrome id via a manifest `"key"` and replace with exact URLs. Site URL fallback is `:49283` (moved off `:3000`). Full detail in `docs/DEVELOPER_MANUAL.md` §4.2.
 
 ## RLS rules
 
-- Read: any authenticated user can read all 3 tables + leaderboard view.
-- `prs` insert/update: only when `auth.jwt() ->> 'user_name' = author_github_login`.
-- `xp_grants` insert: only by the PR author; blocked once `prs.status = 'distributed'`; trigger enforces sum of percentages = 100.
+- `my_team_id()` — `security definer` helper returning the caller's `profiles.team_id` (avoids recursive RLS on profiles).
+- **Read (team-scoped):** `profiles_select_team` (`id = auth.uid() or team_id = my_team_id()`), `prs_select_team` / `xp_grants_select_team` (`team_id = my_team_id()`), `teams_select_own` (`id = my_team_id()`). These replaced the old global `using (true)` policies.
+- `prs` insert (`prs_insert_author`): JWT login = `author_github_login` **AND** the repo's org == caller's team.
+- `prs` update (`prs_update_author`): JWT login = `author_github_login`.
+- `xp_grants` insert (`xp_grants_insert_author_while_open`): only by the PR author, only while `prs.status = 'open'`; a `BEFORE UPDATE` trigger on `prs` enforces sum of percentages = 100 on the flip to `distributed`.
+- `profiles_update_self`: a user may update only their own row (enables the `TEAM_RESOLVE` latch).
+- **JWT login path** (reuse verbatim): `coalesce(auth.jwt() -> 'user_metadata' ->> 'user_name', auth.jwt() -> 'user_metadata' ->> 'preferred_username')`.
 
 ## Architecture conventions
 
-- **Content script never holds the Supabase client.** All DB/API calls go through `browser.runtime.sendMessage` to the background.
-- Message types: discriminated union exported from `src/lib/messages.ts`, imported on both sides.
-- GitHub API token: MVP = user pastes a fine-grained PAT into the popup once, stored in `browser.storage.local`. Upgrade later to Supabase `provider_token`.
-- Use GitHub's CSS variables (`var(--color-canvas-default)` etc.) for injected UI to match light/dark themes.
+- **Content script never holds the Supabase client.** All DB/API calls go through `browser.runtime.sendMessage` to the background, which is the sole holder of the Supabase client. Both sides use a typed `send<T>(msg): Promise<Response<T>>` wrapper.
+- Message types: discriminated `Message` union + `Response<T>` exported from `src/lib/messages.ts`, imported on both sides. Add a new feature = add a `Message` variant + a `case` + a handler.
+- **Two GitHub credentials, distinct roles:** (1) OAuth session (scopes `read:user user:email`) via `browser.identity.launchWebAuthFlow` + Supabase PKCE = *identity*; (2) a user-pasted **PAT** stored in `browser.storage.local` key `github_pat` (needs `read:org`) = *GitHub REST access* (participants, `/user/orgs`). Don't conflate them.
+- Injected UI uses the repo's pixel-art design system in `src/styles/pixel.css` (CSS vars like `var(--gh-bg)`, `var(--gh-green)`, `var(--xp-gold)`) rendered inside a **shadow root** to isolate from GitHub's styles. NOTE: these are the extension's *own* vars (currently dark-tuned), not GitHub's `--color-*` vars.
 
 ## Weekend milestones
 

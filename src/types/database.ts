@@ -20,20 +20,31 @@ export type Database = {
           display_name: string | null
           github_login: string
           id: string
+          team_id: number | null
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           github_login: string
           id: string
+          team_id?: number | null
         }
         Update: {
           created_at?: string
           display_name?: string | null
           github_login?: string
           id?: string
+          team_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       prs: {
         Row: {
@@ -43,6 +54,7 @@ export type Database = {
           pr_number: number
           repo: string
           status: string
+          team_id: number
           xp_pool: number
         }
         Insert: {
@@ -52,7 +64,8 @@ export type Database = {
           pr_number: number
           repo: string
           status?: string
-          xp_pool: number
+          team_id: number
+          xp_pool?: number
         }
         Update: {
           author_github_login?: string
@@ -61,7 +74,37 @@ export type Database = {
           pr_number?: number
           repo?: string
           status?: string
+          team_id?: number
           xp_pool?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          github_org: string
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          github_org: string
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string
+          github_org?: string
+          id?: number
+          name?: string
         }
         Relationships: []
       }
@@ -74,6 +117,7 @@ export type Database = {
           points: number
           pr_id: number
           recipient_github_login: string
+          team_id: number
         }
         Insert: {
           created_at?: string
@@ -83,6 +127,7 @@ export type Database = {
           points: number
           pr_id: number
           recipient_github_login: string
+          team_id: number
         }
         Update: {
           created_at?: string
@@ -92,6 +137,7 @@ export type Database = {
           points?: number
           pr_id?: number
           recipient_github_login?: string
+          team_id?: number
         }
         Relationships: [
           {
@@ -108,6 +154,13 @@ export type Database = {
             referencedRelation: "prs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "xp_grants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -115,13 +168,22 @@ export type Database = {
       leaderboard: {
         Row: {
           recipient_github_login: string | null
+          team_id: number | null
           total: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "xp_grants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
-      [_ in never]: never
+      my_team_id: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never

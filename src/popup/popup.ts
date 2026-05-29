@@ -4,6 +4,7 @@ import type {
   LeaderboardRow,
   Message,
   Response,
+  TeamRow,
   TokenStatus
 } from '../lib/messages'
 import { identiconSvgString } from '../lib/identicon'
@@ -30,6 +31,8 @@ type State = {
   // leaderboard
   board: LeaderboardRow[] | null
   boardError: string | null
+  // team
+  team: TeamRow | null
 }
 
 const state: State = {
@@ -44,7 +47,8 @@ const state: State = {
   tokenError: null,
   showTokenInput: false,
   board: null,
-  boardError: null
+  boardError: null,
+  team: null
 }
 
 const root = document.getElementById('popup-root') as HTMLDivElement
@@ -294,9 +298,18 @@ function renderLeaderboard(): HTMLElement {
   const wrap = el('div', { class: 'lb' })
 
   const header = el('div', { class: 'lb-header' })
-  header.appendChild(el('div', { class: 'pixel-title-lg', style: 'font-size:11px', textContent: 'GLOBAL TOP 100' }))
+  const headerTitle = state.team ? `${state.team.name} — GLOBAL TOP 100` : 'GLOBAL TOP 100'
+  header.appendChild(el('div', { class: 'pixel-title-lg', style: 'font-size:11px', textContent: headerTitle }))
   header.appendChild(el('span', { class: 'pixel-pill', style: 'margin-left:auto', textContent: 'ALL TIME' }))
   wrap.appendChild(header)
+
+  if (!state.team) {
+    wrap.appendChild(el('div', {
+      class: 'hint',
+      style: 'color:var(--gh-text-dim)',
+      textContent: 'Not in a pilot team — ensure your PAT has read:org, or contact your admin.'
+    }))
+  }
 
   const body = el('div', { class: 'lb-body' })
 
@@ -433,7 +446,7 @@ async function refreshAuth() {
     state.myLogin = payload.githubLogin
     if (state.view === 'connect') state.view = 'profile'
     render()
-    await Promise.all([refreshProfileXp(), refreshTokenStatus()])
+    await Promise.all([refreshProfileXp(), refreshTokenStatus(), refreshTeam()])
   } else {
     state.signedIn = false
     state.myLogin = null
@@ -467,6 +480,14 @@ async function loadLeaderboard() {
   const res = await send<LeaderboardRow[]>({ type: 'LEADERBOARD_GET' })
   if (!res.ok) { state.boardError = res.error; render(); return }
   state.board = res.data ?? []
+  render()
+}
+
+async function refreshTeam() {
+  // TEAM_RESOLVE latches the team server-side; TEAM_GET returns the current value.
+  await send<TeamRow | null>({ type: 'TEAM_RESOLVE' })
+  const res = await send<TeamRow | null>({ type: 'TEAM_GET' })
+  state.team = res.ok ? (res.data ?? null) : null
   render()
 }
 
