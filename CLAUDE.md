@@ -31,7 +31,6 @@ src/
 ├── lib/
 │   ├── supabase.ts           # typed client (PKCE, session in storage.local via ext-storage)
 │   ├── ext-storage.ts        # SupportedStorage adapter backing Supabase auth to storage.local
-│   ├── github.ts             # GitHub REST calls + PAT storage helpers
 │   ├── messages.ts           # discriminated Message union + Response<T> + row types
 │   └── identicon.ts          # deterministic pixel-art avatars
 ├── styles/                   # pixel.css (component lib + GitHub CSS vars), fonts.css
@@ -70,9 +69,8 @@ Build output goes to `dist/`.
 - **`team_id` is NEVER sent by the client.** The DB derives and enforces it:
   - `prs`: a `BEFORE INSERT` trigger (`prs_set_team`) derives team from `lower(split_part(repo,'/',1))`, rejects non-pilot orgs (`check_violation`, surfaced as "Your GitHub org is not part of the pilot."), and latches the author's `profiles.team_id`.
   - `xp_grants`: a `BEFORE INSERT` trigger (`xp_grants_set_team`) copies the parent PR's `team_id`.
-  - `profiles`: latched by the `prs` trigger (authors) and by the `TEAM_RESOLVE` message (reviewers, via GitHub `/user/orgs`).
-- **Team resolution** happens client-side via `TEAM_RESOLVE`: the background reads the user's PAT, calls GitHub `/user/orgs` (**requires `read:org`**), matches an org against `teams.github_org`, and latches `profiles.team_id` (allowed by `profiles_update_self`). Both the popup (on load) and the content script (in `refresh()`, before `PR_GET_OR_CREATE`) send it.
-- **Known gap:** a user whose PAT lacks `read:org` cannot be auto-resolved at all — including a first-time *author* (the tightened `prs_insert_author` check requires `my_team_id()` to already match the repo org). The design's optional repo-owner fallback (`msg.repoOwner`) is **not implemented**.
+  - `profiles`: latched by the `prs` trigger (authors) and by the `TEAM_RESOLVE` message (reviewers, via URL-derived org).
+- **Team resolution** happens client-side via `TEAM_RESOLVE`: the caller passes `repoOwner` (the GitHub org extracted from the current tab URL), the background looks it up in `teams.github_org`, and latches `profiles.team_id` (allowed by `profiles_update_self`). Both the popup's `refreshTeam()` (queries the active tab on load and after sign-in) and the content script (in `refresh()`, before `PR_GET_OR_CREATE`) send it. No PAT or GitHub API call is involved — the org is always derivable from the URL, and since the repos are private, only actual org members can reach those pages.
 - **Known gap (auth redirect, pilot-only — TODO tighten):** the OAuth redirect URL isn't stable per install (Chrome unpacked id varies by folder path; Firefox uses a random per-install UUID), so the hosted Supabase **Auth → Redirect URLs** allow-list uses broad wildcards (`https://*.chromiumapp.org/`, `https://*.extensions.allizom.org/`). Acceptable only for the closed pilot. Before production: pin the Chrome id via a manifest `"key"` and replace with exact URLs. Site URL fallback is `:49283` (moved off `:3000`). Full detail in `docs/DEVELOPER_MANUAL.md` §4.2.
 
 ## RLS rules
@@ -89,7 +87,7 @@ Build output goes to `dist/`.
 
 - **Content script never holds the Supabase client.** All DB/API calls go through `browser.runtime.sendMessage` to the background, which is the sole holder of the Supabase client. Both sides use a typed `send<T>(msg): Promise<Response<T>>` wrapper.
 - Message types: discriminated `Message` union + `Response<T>` exported from `src/lib/messages.ts`, imported on both sides. Add a new feature = add a `Message` variant + a `case` + a handler.
-- **Two GitHub credentials, distinct roles:** (1) OAuth session (scopes `read:user user:email`) via `browser.identity.launchWebAuthFlow` + Supabase PKCE = *identity*; (2) a user-pasted **PAT** stored in `browser.storage.local` key `github_pat` (needs `read:org`) = *GitHub REST access* (participants, `/user/orgs`). Don't conflate them.
+- **One GitHub credential:** the OAuth session (scopes `read:user user:email`) via `browser.identity.launchWebAuthFlow` + Supabase PKCE. This is the only credential — there is no PAT. Team resolution uses the current tab URL; PR participants are scraped from the rendered GitHub page DOM.
 - Injected UI uses the repo's pixel-art design system in `src/styles/pixel.css` (CSS vars like `var(--gh-bg)`, `var(--gh-green)`, `var(--xp-gold)`) rendered inside a **shadow root** to isolate from GitHub's styles. NOTE: these are the extension's *own* vars (currently dark-tuned), not GitHub's `--color-*` vars.
 
 ## Weekend milestones
