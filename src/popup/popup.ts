@@ -4,8 +4,7 @@ import type {
   LeaderboardRow,
   Message,
   Response,
-  TeamRow,
-  TokenStatus
+  TeamRow
 } from '../lib/messages'
 import { identiconSvgString } from '../lib/identicon'
 import { iconSvg } from '../lib/pixel-icons'
@@ -25,9 +24,6 @@ type State = {
   // profile
   totalXp: number | null
   rank: number | null
-  tokenStatus: TokenStatus | null
-  tokenError: string | null
-  showTokenInput: boolean
   // leaderboard
   board: LeaderboardRow[] | null
   boardError: string | null
@@ -43,9 +39,6 @@ const state: State = {
   busy: false,
   totalXp: null,
   rank: null,
-  tokenStatus: null,
-  tokenError: null,
-  showTokenInput: false,
   board: null,
   boardError: null,
   team: null
@@ -195,9 +188,6 @@ function renderProfile(): HTMLElement {
   if (state.busy) signOut.setAttribute('disabled', '')
   wrap.appendChild(signOut)
 
-  // Token section
-  wrap.appendChild(renderTokenSection())
-
   if (state.authError) {
     wrap.appendChild(el('div', { class: 'error-banner', textContent: state.authError }))
   }
@@ -205,94 +195,6 @@ function renderProfile(): HTMLElement {
   return wrap
 }
 
-function renderTokenSection(): HTMLElement {
-  const sec = el('div', { class: 'token-section' })
-  sec.appendChild(el('div', { class: 'pixel-title', textContent: '◆ GITHUB API TOKEN' }))
-
-  const ts = state.tokenStatus
-  if (!ts || state.showTokenInput) {
-    const showError = ts?.state === 'invalid'
-    if (showError) {
-      sec.appendChild(el('div', { class: 'token-status err', textContent: `Saved token invalid: ${ts.error}` }))
-    } else {
-      sec.appendChild(el('div', {
-        class: 'token-status',
-        textContent: ts?.state === 'absent' ? 'No token saved.' : 'Checking token…'
-      }))
-    }
-
-    const wrap = el('div', { class: 'token-input-wrap' })
-    wrap.appendChild(el('label', { htmlFor: 'token-input', textContent: 'FINE-GRAINED PAT' }))
-    wrap.appendChild(el('div', {
-      class: 'hint',
-      textContent: 'Needed to fetch reviewers/commenters when distributing XP.'
-    }))
-    const input = el('input', {
-      id: 'token-input',
-      type: 'password',
-      placeholder: 'github_pat_…',
-      autocomplete: 'off'
-    }) as HTMLInputElement
-    wrap.appendChild(input)
-
-    const actions = el('div', { class: 'token-actions' })
-    const saveBtn = el('button', {
-      class: 'pixel-btn pixel-btn--green pixel-btn--sm',
-      textContent: 'SAVE TOKEN'
-    })
-    saveBtn.addEventListener('click', async () => {
-      const v = input.value.trim()
-      if (!v) { state.tokenError = 'Paste a token first.'; render(); return }
-      state.busy = true; render()
-      const res = await send({ type: 'GH_TOKEN_SET', token: v })
-      state.busy = false
-      if (!res.ok) { state.tokenError = res.error; render(); return }
-      state.tokenError = null
-      state.showTokenInput = false
-      await refreshTokenStatus()
-    })
-    actions.appendChild(saveBtn)
-
-    if (ts && ts.state !== 'absent') {
-      const cancel = el('button', {
-        class: 'pixel-btn pixel-btn--ghost pixel-btn--sm',
-        textContent: 'CANCEL'
-      })
-      cancel.addEventListener('click', () => {
-        state.showTokenInput = false
-        state.tokenError = null
-        render()
-      })
-      actions.appendChild(cancel)
-    }
-    wrap.appendChild(actions)
-    if (state.tokenError) {
-      wrap.appendChild(el('div', { class: 'token-status err', textContent: state.tokenError }))
-    }
-    sec.appendChild(wrap)
-  } else if (ts.state === 'valid') {
-    const row = el('div', { class: 'token-saved-row' })
-    row.appendChild(el('div', {
-      class: 'token-saved-text',
-      html: `${iconSvg('check', 10, 'var(--gh-green)')}<span>VALIDATED${ts.login ? ' AS @' + ts.login : ''}</span>`
-    }))
-    const replace = el('button', {
-      class: 'pixel-btn pixel-btn--ghost pixel-btn--sm',
-      textContent: 'REPLACE…'
-    })
-    replace.addEventListener('click', () => {
-      state.showTokenInput = true
-      render()
-    })
-    row.appendChild(replace)
-    sec.appendChild(row)
-  } else if (ts.state === 'absent') {
-    state.showTokenInput = true
-    return renderTokenSection()
-  }
-
-  return sec
-}
 
 function renderLeaderboard(): HTMLElement {
   const wrap = el('div', { class: 'lb' })
@@ -307,7 +209,7 @@ function renderLeaderboard(): HTMLElement {
     wrap.appendChild(el('div', {
       class: 'hint',
       style: 'color:var(--gh-text-dim)',
-      textContent: 'Not in a pilot team — ensure your PAT has read:org, or contact your admin.'
+      textContent: 'Open any PR in your org to activate your team.'
     }))
   }
 
@@ -446,7 +348,7 @@ async function refreshAuth() {
     state.myLogin = payload.githubLogin
     if (state.view === 'connect') state.view = 'profile'
     render()
-    await Promise.all([refreshProfileXp(), refreshTokenStatus(), refreshTeam()])
+    await Promise.all([refreshProfileXp(), refreshTeam()])
   } else {
     state.signedIn = false
     state.myLogin = null
@@ -484,22 +386,18 @@ async function loadLeaderboard() {
 }
 
 async function refreshTeam() {
-  // TEAM_RESOLVE latches the team server-side; TEAM_GET returns the current value.
-  await send<TeamRow | null>({ type: 'TEAM_RESOLVE' })
+  // Extract the GitHub org from the active tab URL so TEAM_RESOLVE can latch
+  // team_id without requiring a PAT. Falls back gracefully if not on GitHub.
+  let repoOwner: string | undefined
+  try {
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+    const m = tab?.url?.match(/^https:\/\/github\.com\/([^/]+)\//)
+    if (m) repoOwner = m[1].toLowerCase()
+  } catch { /* tabs API unavailable — ignore */ }
+
+  await send<TeamRow | null>({ type: 'TEAM_RESOLVE', repoOwner })
   const res = await send<TeamRow | null>({ type: 'TEAM_GET' })
   state.team = res.ok ? (res.data ?? null) : null
-  render()
-}
-
-async function refreshTokenStatus() {
-  const res = await send<TokenStatus>({ type: 'GH_TOKEN_VALIDATE' })
-  if (!res.ok) {
-    state.tokenStatus = { state: 'invalid', error: res.error }
-  } else {
-    state.tokenStatus = res.data ?? { state: 'absent' }
-  }
-  if (state.tokenStatus.state === 'valid') state.showTokenInput = false
-  state.tokenError = null
   render()
 }
 
@@ -530,7 +428,6 @@ async function onSignOut() {
     state.totalXp = null
     state.rank = null
     state.board = null
-    state.tokenStatus = null
     await refreshAuth()
   }
 }

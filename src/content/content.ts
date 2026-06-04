@@ -631,21 +631,42 @@ function renderReviewerWon(pr: PrRow, grants: GrantRow[]): HTMLElement {
 
 // ---------- distribute flow ----------
 
+function scrapePrParticipants(author: string): string[] {
+  const logins = new Set<string>()
+
+  // 1. Reviewer logins from the Reviewers section of the sidebar
+  const sidebar = findSidebar()
+  if (sidebar) {
+    const headings = sidebar.querySelectorAll('h2, h3')
+    let section: Element | null = null
+    for (const h of headings) {
+      if (/^Reviewers$/i.test(h.textContent?.trim() ?? '')) {
+        section = sectionBlockFor(h, sidebar) ?? h.parentElement
+        break
+      }
+    }
+    if (section) {
+      section.querySelectorAll('a[data-hovercard-type="user"]').forEach(a => {
+        const login = a.textContent?.trim() || a.getAttribute('href')?.slice(1).split('/')[0]
+        if (login && !login.includes('/')) logins.add(login)
+      })
+    }
+  }
+
+  // 2. Comment author logins from the PR timeline
+  document.querySelectorAll('a.author').forEach(a => {
+    const login = a.textContent?.trim()
+    if (login) logins.add(login)
+  })
+
+  logins.delete(author)
+  return [...logins].sort((a, b) => a.localeCompare(b))
+}
+
 async function startDistribute() {
   if (!state.info || !state.pr) return
-  state.busy = true
-  state.error = null
   state.mode = 'distribute'
-  render()
-  const res = await send<string[]>({
-    type: 'PR_FETCH_PARTICIPANTS',
-    repo: state.info.repo,
-    pr_number: state.info.prNumber,
-    author_github_login: state.info.authorLogin ?? ''
-  })
-  state.busy = false
-  if (!res.ok) { state.error = res.error; state.mode = 'view'; render(); return }
-  state.participants = res.data ?? []
+  state.participants = scrapePrParticipants(state.info.authorLogin ?? '')
   state.draft = {}
   if (state.participants.length > 0) {
     const even = Math.floor(100 / state.participants.length)
@@ -1071,7 +1092,7 @@ async function refreshImpl() {
   // Latch this author's team server-side before the PR insert. A brand-new
   // author whose profiles.team_id is null must be resolved first, or the
   // insert's RLS check fails. We don't need the result — just don't crash.
-  await send<TeamRow | null>({ type: 'TEAM_RESOLVE' }).catch(() => undefined)
+  await send<TeamRow | null>({ type: 'TEAM_RESOLVE', repoOwner: info.repo.split('/')[0] }).catch(() => undefined)
 
   const prRes = await send<PrRow | null>({
     type: 'PR_GET_OR_CREATE',
