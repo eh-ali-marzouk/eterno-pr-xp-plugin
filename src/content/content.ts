@@ -631,6 +631,17 @@ function renderReviewerWon(pr: PrRow, grants: GrantRow[]): HTMLElement {
 
 // ---------- distribute flow ----------
 
+function isHumanAuthorLink(a: Element): boolean {
+  // GitHub Apps link to /apps/{name}; regular users link to /{login}.
+  if (a.getAttribute('href')?.startsWith('/apps/')) return false
+  // GitHub App bot accounts have logins ending in [bot].
+  if ((a.textContent?.trim() ?? '').endsWith('[bot]')) return false
+  // Non-user hovertypes (organization, app, etc.) are not human reviewers.
+  const hoverType = a.getAttribute('data-hovercard-type')
+  if (hoverType && hoverType !== 'user') return false
+  return true
+}
+
 function scrapePrParticipants(author: string): string[] {
   const logins = new Set<string>()
 
@@ -647,6 +658,7 @@ function scrapePrParticipants(author: string): string[] {
     }
     if (section) {
       section.querySelectorAll('a[data-hovercard-type="user"]').forEach(a => {
+        if (!isHumanAuthorLink(a)) return
         const login = a.textContent?.trim() || a.getAttribute('href')?.slice(1).split('/')[0]
         if (login && !login.includes('/')) logins.add(login)
       })
@@ -655,6 +667,7 @@ function scrapePrParticipants(author: string): string[] {
 
   // 2. Comment author logins from the PR timeline
   document.querySelectorAll('a.author').forEach(a => {
+    if (!isHumanAuthorLink(a)) return
     const login = a.textContent?.trim()
     if (login) logins.add(login)
   })
@@ -682,11 +695,6 @@ function renderDistribute(pr: PrRow): HTMLElement {
   const participants = state.participants ?? []
   const children: HTMLElement[] = []
   children.push(readout(pr.xp_pool, 'POOL READY', 'gold'))
-
-  if (state.participants === null) {
-    children.push(el('div', { class: 'blink', style: 'text-align:center;font-family:var(--font-pixel);font-size:9px;color:var(--gh-text-mute);padding:8px', textContent: 'FETCHING REVIEWERS…' }))
-    return cardShell('XP POOL · READY TO DROP', 'var(--xp-gold)', children)
-  }
 
   if (participants.length === 0) {
     children.push(el('div', {
