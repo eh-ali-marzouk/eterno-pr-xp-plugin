@@ -8,16 +8,11 @@ export type Message =
   | { type: 'AUTH_GET_REDIRECT_URL' }
   | { type: 'PR_GET_OR_CREATE'; repo: string; pr_number: number; author_github_login: string }
   | { type: 'PR_SET_POOL'; pr_id: number; xp_pool: number }
-  | { type: 'PR_FETCH_PARTICIPANTS'; repo: string; pr_number: number; author_github_login: string }
   | { type: 'PR_DISTRIBUTE'; pr_id: number; xp_pool: number; grants: GrantInput[] }
   | { type: 'PR_LIST_GRANTS'; pr_id: number }
   | { type: 'LEADERBOARD_GET' }
-  | { type: 'GH_TOKEN_GET' }
-  | { type: 'GH_TOKEN_SET'; token: string }
-  | { type: 'GH_TOKEN_CLEAR' }
-  | { type: 'GH_TOKEN_VALIDATE' }
   | { type: 'TEAM_GET' }
-  | { type: 'TEAM_RESOLVE' }
+  | { type: 'TEAM_RESOLVE'; repoOwner?: string }
 
 export type Response<T = unknown> =
   | { ok: true; data?: T }
@@ -63,7 +58,3 @@ export type LeaderboardRow = {
   team_id?: number
 }
 
-export type TokenStatus =
-  | { state: 'absent' }
-  | { state: 'valid'; login?: string }
-  | { state: 'invalid'; error: string }

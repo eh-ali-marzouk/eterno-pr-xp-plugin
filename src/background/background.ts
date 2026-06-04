@@ -8,17 +8,8 @@ import type {
   Message,
   PrRow,
   Response,
-  TeamRow,
-  TokenStatus
+  TeamRow
 } from '../lib/messages'
-import {
-  clearStoredToken,
-  fetchPrParticipants,
-  fetchUserOrgs,
-  getStoredToken,
-  setStoredToken,
-  validateToken
-} from '../lib/github'
 
 browser.runtime.onMessage.addListener(
   (msg: Message): Promise<Response> => {
@@ -37,22 +28,12 @@ browser.runtime.onMessage.addListener(
         return prGetOrCreate(msg.repo, msg.pr_number, msg.author_github_login)
       case 'PR_SET_POOL':
         return prSetPool(msg.pr_id, msg.xp_pool)
-      case 'PR_FETCH_PARTICIPANTS':
-        return prFetchParticipants(msg.repo, msg.pr_number, msg.author_github_login)
       case 'PR_DISTRIBUTE':
         return prDistribute(msg.pr_id, msg.xp_pool, msg.grants)
       case 'PR_LIST_GRANTS':
         return prListGrants(msg.pr_id)
       case 'LEADERBOARD_GET':
         return leaderboardGet()
-      case 'GH_TOKEN_GET':
-        return getStoredToken().then((t) => ({ ok: true, data: t }))
-      case 'GH_TOKEN_SET':
-        return setStoredToken(msg.token).then(() => ({ ok: true }))
-      case 'GH_TOKEN_CLEAR':
-        return clearStoredToken().then(() => ({ ok: true }))
-      case 'GH_TOKEN_VALIDATE':
-        return ghTokenValidate()
       case 'TEAM_GET':
         return teamGet()
       case 'TEAM_RESOLVE':
@@ -183,22 +164,6 @@ async function prSetPool(pr_id: number, xp_pool: number): Promise<Response<PrRow
   return { ok: true, data: data as PrRow }
 }
 
-async function prFetchParticipants(
-  repo: string,
-  pr_number: number,
-  author_github_login: string
-): Promise<Response<string[]>> {
-  const token = await getStoredToken()
-  if (!token) {
-    return { ok: false, error: 'No GitHub token saved. Open the extension popup and paste a fine-grained PAT.' }
-  }
-  try {
-    const logins = await fetchPrParticipants(repo, pr_number, author_github_login, token)
-    return { ok: true, data: logins }
-  } catch (err) {
-    return { ok: false, error: errMsg(err) }
-  }
-}
 
 async function prDistribute(
   pr_id: number,
@@ -266,13 +231,6 @@ async function currentGithubLogin(): Promise<string | null> {
   )
 }
 
-async function ghTokenValidate(): Promise<Response<TokenStatus>> {
-  const token = await getStoredToken()
-  if (!token) return { ok: true, data: { state: 'absent' } }
-  const result = await validateToken(token)
-  if (result.valid) return { ok: true, data: { state: 'valid', login: result.login } }
-  return { ok: true, data: { state: 'invalid', error: result.error ?? 'unknown' } }
-}
 
 async function teamGet(): Promise<Response<TeamRow | null>> {
   const { data: me } = await supabase.auth.getUser()
@@ -289,9 +247,10 @@ async function teamGet(): Promise<Response<TeamRow | null>> {
 }
 
 // Resolve and latch the caller's profiles.team_id.
-// Strategy: (1) if already set, return it; (2) match a GitHub org from /user/orgs
-// against teams.github_org; (3) else null (caller shows the "not in pilot" hint).
-async function teamResolve(_msg: Extract<Message, { type: 'TEAM_RESOLVE' }>): Promise<Response<TeamRow | null>> {
+// Strategy: (1) if already set, return it; (2) look up the pilot team by
+// msg.repoOwner (the GitHub org extracted from the current tab URL by the caller);
+// (3) else return null.
+async function teamResolve(msg: Extract<Message, { type: 'TEAM_RESOLVE' }>): Promise<Response<TeamRow | null>> {
   const { data: me } = await supabase.auth.getUser()
   const uid = me.user?.id
   if (!uid) return { ok: true, data: null }
@@ -300,17 +259,14 @@ async function teamResolve(_msg: Extract<Message, { type: 'TEAM_RESOLVE' }>): Pr
   const existing = await teamGet()
   if (existing.ok && existing.data) return existing
 
-  const token = await getStoredToken()
-  if (!token) return { ok: true, data: null }
+  const org = msg.repoOwner?.toLowerCase()
+  if (!org) return { ok: true, data: null }
 
-  const orgs = await fetchUserOrgs(token)          // lowercased
-  if (orgs.length === 0) return { ok: true, data: null }
-
-  // Find the first pilot team matching one of the user's orgs.
   const { data: teams, error } = await supabase
     .from('teams')
     .select('id, name, github_org')
-    .in('github_org', orgs)
+    .eq('github_org', org)
+    .limit(1)
   if (error) return { ok: false, error: error.message }
   const team = (teams?.[0] ?? null) as TeamRow | null
   if (!team) return { ok: true, data: null }
