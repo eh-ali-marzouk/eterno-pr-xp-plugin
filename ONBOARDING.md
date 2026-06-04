@@ -38,78 +38,26 @@ Pick your browser. Each release zip contains the same build — they differ only
 1. Click the Review-Master **toolbar icon** to open the popup.
 2. Sign in with **GitHub** (OAuth).
 
-## 4. Add a GitHub token
+## 4. Team auto-detection
 
-### Why the extension needs a token
+**Nothing to configure.** The extension detects your team automatically from the GitHub URL —
+no Personal Access Token required.
 
-GitHub OAuth (step 3) only proves **who you are**. To read GitHub data on your behalf — the
-list of orgs you belong to (`/user/orgs`, used to match you to your pilot team) and the
-reviewers/commenters on a PR (used to build the distribution form) — the extension makes
-GitHub REST API calls, and those need a **Personal Access Token (PAT)**. The OAuth login and
-the PAT are two separate credentials with two separate jobs (identity vs. data access).
+- **At sign-in:** if the active browser tab is already a GitHub page, your team is resolved immediately.
+- **On any PR page:** the extension derives your org from the URL (e.g. `github.com/acme/…` → org `acme`) and latches your team in the background on every page load.
 
-### Is it safe to give the token?
+You will see your team name appear in the popup's Profile and Leaderboard tabs once you open any PR in your org.
 
-Short version: **yes, for the scopes we ask for** — but understand what you're granting.
+> **Note for admins:** the org must be seeded in the `teams` table before anyone can use the extension with it. Contact the pilot admin if you see "Your GitHub org is not part of the pilot."
 
-- The token is stored **only locally** in your browser's extension storage on your own
-  machine. It is **never sent to our servers** (there is no custom server — the only backend
-  is Supabase, and the token never goes there). The API calls go **directly from your browser
-  to `api.github.com`**.
-- We ask for **read-only** scopes (`read:user`, `read:org`). The token **cannot push code,
-  change settings, or write anything** to your account or repos.
-- `read:org` does let the token *read* your org membership (including private membership).
-  If that's sensitive in your context, prefer a **fine-grained** token scoped to only the
-  org(s) in the pilot (see below).
-- You stay in control: you can **revoke** the token at any time from GitHub settings, and
-  setting an **expiration** is recommended.
-
-> Caveat to be honest about: any value stored in extension local storage is readable by you
-> (and anything running as you on your machine). Treat the token like a password — don't paste
-> it on a shared/public computer, and revoke it when the pilot ends.
-
-### How to create the token (classic — simplest)
-
-1. Go to <https://github.com/settings/tokens> → **Generate new token** → **Generate new token (classic)**.
-2. **Note:** name it something recognizable, e.g. `review-master-pilot`.
-3. **Expiration:** pick a limited window (e.g. 30–90 days) rather than "No expiration".
-4. **Select scopes** — check exactly these two, nothing else:
-   - ✅ `read:org` (under **admin:org** → it's the read-only child checkbox)
-   - ✅ `read:user` (under **user**)
-5. Click **Generate token** and **copy it now** — GitHub shows it only once.
-6. Paste it into the Review-Master popup. You only do this once; it's stored locally.
-
-### Alternative: fine-grained token (tighter scope)
-
-If you'd rather not grant org-wide classic read access:
-
-1. <https://github.com/settings/tokens> → **Fine-grained tokens** → **Generate new token**.
-2. **Resource owner:** select the org that's part of the pilot.
-3. **Expiration:** set a limited window.
-4. **Organization permissions:** grant **Members → Read-only** (this is the fine-grained
-   equivalent of `read:org`). Repository read access is sufficient for the rest.
-5. Generate, copy, and paste into the popup.
-
-> **`read:org` (or fine-grained Members: Read) is required.** It's what lets the extension
-> auto-detect your team via the GitHub `/user/orgs` API. Without it, you won't be matched to a
-> pilot team. Note that fine-grained tokens for an org may need **org owner approval** before
-> they work.
-
-## 5. Team auto-detection
-
-Your team is derived from your GitHub org — **nothing to configure**.
-
-- **Authors** are auto-assigned to their team the first time they interact with a PR in a seeded org.
-- **Reviewers** who never author a PR rely on **`read:org`** to be detected. Make sure your token includes it.
-
-## 6. Daily use
+## 5. Daily use
 
 1. On your PR page, set an **XP pool**.
-2. After the PR **merges**, open the distribution form and split the XP among reviewers/commenters by percentage. The percentages **must sum to 100**.
+2. After the PR **merges**, open the distribution form and split the XP among reviewers/commenters by percentage. The percentages **must sum to 100**. Bot reviewers (GitHub Apps, Copilot, etc.) are excluded automatically.
 3. Open the popup to view your **team leaderboard** (shown as `<Team> — GLOBAL TOP 100`).
 
-## 7. Troubleshooting
+## 6. Troubleshooting
 
-- **"Not in a pilot team"** (in the popup) — your PAT is missing **`read:org`**, or your org hasn't been seeded into the `teams` table (an admin must add it).
-- **"Your GitHub org is not part of the pilot."** (on a PR widget) — same root cause: the PR's org isn't a seeded pilot team.
-- **General** — after rebuilding/reloading the extension, hard-refresh the PR page. Confirm you're signed in and your PAT is set.
+- **"Open any PR in your org to activate your team."** (in the popup) — you haven't visited a PR page in your org yet. Navigate to any PR in the pilot org and the team will resolve automatically.
+- **"Your GitHub org is not part of the pilot."** (on a PR widget) — the PR's org hasn't been seeded into the `teams` table. An admin must add it.
+- **General** — after rebuilding/reloading the extension, hard-refresh the PR page and confirm you're signed in.
