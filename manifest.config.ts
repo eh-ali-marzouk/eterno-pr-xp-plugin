@@ -25,7 +25,6 @@ export default defineManifest({
   permissions: ['storage', 'identity', 'activeTab'],
   host_permissions: [
     'https://github.com/*',
-    'https://api.github.com/*',
     'https://*.supabase.co/*'
   ],
   background: {
